@@ -43,19 +43,21 @@ def lambda_handler(event, context):
         document_text = ''
         for item in response['Blocks']:
             if item['BlockType'] == 'LINE':
-                document_text += item['Text'] + '\n'
+                #document_text += item['Text'] + '\n'
 
-        # Detect PII entities using Comprehend
-        pii_response = comprehend.detect_pii_entities(Text=document_text, LanguageCode='en')
+                # Detect PII entities using Comprehend
+                pii_response = comprehend.detect_pii_entities(Text=item["Text"], LanguageCode='en')
+                if pii_response["Entities"]:
+                    response.replace(item["Text"], "*" * len(item["Text"]))
 
         # Redact PII entities
-        redacted_text = document_text
-        for entity in pii_response['Entities']:
-            redacted_text = redacted_text.replace(entity['Text'], '*' * len(entity['Text']))
+        #redacted_text = document_text
+        #for entity in pii_response['Entities']:
+            #redacted_text = redacted_text.replace(entity['Text'], '*' * len(entity['Text']))
 
         # Store the redacted document back to S3
         redacted_key = f'redacted/{key}'
-        s3.put_object(Bucket=bucket, Key=redacted_key, Body=redacted_text.encode('utf-8'))
+        s3.put_object(Bucket=bucket, Key=redacted_key, Body=response.encode('utf-8'))
 
         return {
             'statusCode': 200,
@@ -66,3 +68,4 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'body': json.dumps('Textract job failed')
         }
+    
