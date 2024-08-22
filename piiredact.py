@@ -45,6 +45,9 @@ def lambda_handler(event, context):
                 break
             
             time.sleep(5)  # Wait before checking the job status again
+        
+        output = json.dumps(response)
+        logger.debug(f'Textract response: {output}')
 
         # Check if the job succeeded
         if status == 'SUCCEEDED':
@@ -58,12 +61,12 @@ def lambda_handler(event, context):
                     pii_response = comprehend.detect_pii_entities(Text=item["Text"], LanguageCode='en')
                     if pii_response["Entities"]:
                         logger.info(f'PII detected in line: {item["Text"]}')
-                        response.replace(item["Text"], "*" * len(item["Text"]))
-                        logger.debug(f'Redacted line: {item["Text"]}')
+                        output = output.replace(item["Text"], "*" * len(item["Text"]))
+                        logger.debug(f'Redacted line in output')
 
             # Store the redacted document back to S3
             redacted_key = f'redacted/{key}'
-            s3.put_object(Bucket=bucket, Key=redacted_key, Body=response.encode('utf-8'))
+            s3.put_object(Bucket=bucket, Key=redacted_key, Body=output.encode('utf-8'))
             logger.info(f'Redacted document saved to {redacted_key}')
 
             return {
